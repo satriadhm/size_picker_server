@@ -46,7 +46,7 @@ app.post('/api/export', async (req, res) => {
 
       const mailOptions = {
         from: process.env.EMAIL_USER,
-        to: 'glorioussatria@gmail.com',
+        to: 'michaeltimonuli@gmail.com',
         subject: 'Size Chart Export',
         text: 'Please find the attached size chart file.',
         attachments: [
