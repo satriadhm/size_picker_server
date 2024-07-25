@@ -24,6 +24,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+app.get("/", (req, res) => {
+  res.send("Server is running.");
+});
+
 app.post("/api/export", (req, res) => {
   const data = req.body;
   console.log("Received data:", data); // Log the received data
