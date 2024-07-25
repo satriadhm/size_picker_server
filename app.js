@@ -4,7 +4,7 @@ const cors = require('cors');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
-const nodemailer = require('nodemailer'); // Import nodemailer
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(bodyParser.json());
@@ -15,16 +15,14 @@ let dataStore = [];
 
 // Email configuration
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  service: 'gmail', // Use 'gmail' for service, or configure host/port if using custom SMTP
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-app.post('/api/export', (req, res) => {
+app.post('/api/export', async (req, res) => {
   const data = req.body;
   console.log('Received data:', data);
 
@@ -35,33 +33,42 @@ app.post('/api/export', (req, res) => {
     const workbook = xlsx.utils.book_new();
     const worksheet = xlsx.utils.json_to_sheet(dataStore);
 
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Size Chart');
-
     const filePath = path.join('/tmp', 'size_chart.xlsx'); // Use /tmp directory
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Size Chart');
     xlsx.writeFile(workbook, filePath);
 
     // Clear dataStore after exporting
     dataStore = [];
 
-    // Send email with attachment
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: 'glorioussatria@gmail.com',
-      subject: 'Size Chart Export',
-      text: 'Please find the attached size chart file.',
-      attachments: [
-        {
-          filename: 'size_chart.xlsx',
-          path: filePath,
-        },
-      ],
-    };
+    try {
+      // Verify connection configuration
+      await transporter.verify();
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).send('Error sending email.');
-      }
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: 'glorioussatria@gmail.com',
+        subject: 'Size Chart Export',
+        text: 'Please find the attached size chart file.',
+        attachments: [
+          {
+            filename: 'size_chart.xlsx',
+            path: filePath,
+          },
+        ],
+      };
+
+      // Send email
+      await new Promise((resolve, reject) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error('Error sending email:', error);
+            reject(error);
+          } else {
+            console.log('Email sent:', info.response);
+            resolve(info);
+          }
+        });
+      });
 
       // Remove file after sending email
       fs.unlink(filePath, (err) => {
@@ -69,7 +76,10 @@ app.post('/api/export', (req, res) => {
       });
 
       res.status(200).send('Email sent successfully.');
-    });
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send('Error sending email.');
+    }
   } else {
     res.json({ message: 'Data received, waiting for more entries to export.' });
   }
