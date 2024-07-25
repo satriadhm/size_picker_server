@@ -29,7 +29,7 @@ app.post('/api/export', async (req, res) => {
   // Add new data to the store
   dataStore.push(data);
 
-  if (dataStore.length >= 35) {
+  if (dataStore.length >= 36) {
     const workbook = xlsx.utils.book_new();
     const worksheet = xlsx.utils.json_to_sheet(dataStore);
 
